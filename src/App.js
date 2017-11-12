@@ -12,7 +12,15 @@ class BooksApp extends React.Component {
   componentDidMount() {
     BooksAPI.getAll().then((books) => {
       this.setState({books})
-      console.log(books)
+    })
+  }
+  moveToShelf = (changedBook, newShelf) => {
+    BooksAPI.update(changedBook, newShelf).then((response) => {
+      const books = [...this.state.books]
+      const changedBookIndex = books.findIndex(book => book.id === changedBook.id)
+
+      books[changedBookIndex].shelf = newShelf
+      this.setState({books})
     })
   }
 
@@ -20,7 +28,7 @@ class BooksApp extends React.Component {
     const currentlyReadingBooks = this.state.books.filter(book => book.shelf === 'currentlyReading')
     const wantToReadBooks = this.state.books.filter(book => book.shelf === 'wantToRead')
     const readBooks = this.state.books.filter(book => book.shelf === 'read')
-    console.log(currentlyReadingBooks)
+
     return (
       <div className="app">
         {this.state.showSearchPage ? (
@@ -51,9 +59,9 @@ class BooksApp extends React.Component {
             </div>
             <div className="list-books-content">
               <div>
-                <Bookshelves name='Currently Reading' books={currentlyReadingBooks}/>
-                <Bookshelves name='Want To Read' books={wantToReadBooks}/>
-                <Bookshelves name='Read' books={readBooks}/>
+                <Bookshelves name='Currently Reading' books={currentlyReadingBooks} moveToShelf={this.moveToShelf} />
+                <Bookshelves name='Want To Read' books={wantToReadBooks} moveToShelf={this.moveToShelf} />
+                <Bookshelves name='Read' books={readBooks} moveToShelf={this.moveToShelf} />
               </div>
             </div>
             <div className="open-search">

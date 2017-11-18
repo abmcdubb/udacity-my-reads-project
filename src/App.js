@@ -1,14 +1,17 @@
 import React from 'react';
 import { Link, Route } from 'react-router-dom';
+// import escapeRegExp from 'escape-string-regexp';
 import Bookshelves from './Bookshelves';
 import * as BooksAPI from './BooksAPI';
+
 
 import './App.css'
 
 class BooksApp extends React.Component {
   state = {
     books: [],
-    showSearchPage: false
+    searchQuery: '',
+    searchResultBooks: [],
   }
   componentDidMount() {
     BooksAPI.getAll().then((books) => {
@@ -20,16 +23,49 @@ class BooksApp extends React.Component {
     BooksAPI.update(changedBook, newShelf).then((response) => {
       const books = [...this.state.books]
       const changedBookIndex = books.findIndex(book => book.id === changedBook.id)
+      const book = books[changedBookIndex]
 
-      books[changedBookIndex].shelf = newShelf
+      // modifies book if already in array, adds book to books array if not
+      if (book) {
+        books[changedBookIndex].shelf = newShelf
+      }
+      else {
+        changedBook.shelf = newShelf
+        books.push(changedBook)
+      }
+
       this.setState({books})
     })
+  }
+
+  updateSearchQuery = (query) => {
+    this.setState({searchQuery: query })
+    if (query.length > 0) {
+      BooksAPI.search(query).then((response) => {
+        if (response && !response['error']) {
+          this.setState({searchResultBooks: response})
+        }
+        else {
+          this.clearSearchQuery()
+          this.setState({noSearchResults: true})
+        }
+      })
+    }
+    else {
+      this.clearSearchQuery()
+    }
+  }
+
+  clearSearchQuery = () => {
+    this.setState({searchResultBooks: []})
   }
 
   render() {
     const currentlyReadingBooks = this.state.books.filter(book => book.shelf === 'currentlyReading')
     const wantToReadBooks = this.state.books.filter(book => book.shelf === 'wantToRead')
     const readBooks = this.state.books.filter(book => book.shelf === 'read')
+
+    const {searchQuery, searchResultBooks} = this.state
     // what does one do with no shelf books?
 
     return (
@@ -41,9 +77,9 @@ class BooksApp extends React.Component {
             </div>
             <div className="list-books-content">
               <div>
-                <Bookshelves name='Currently Reading' books={currentlyReadingBooks} moveToShelf={this.moveToShelf} />
-                <Bookshelves name='Want To Read' books={wantToReadBooks} moveToShelf={this.moveToShelf} />
-                <Bookshelves name='Read' books={readBooks} moveToShelf={this.moveToShelf} />
+                <Bookshelves name='Currently Reading' books={currentlyReadingBooks} moveToShelf={this.moveToShelf} searchPage={false}/>
+                <Bookshelves name='Want To Read' books={wantToReadBooks} moveToShelf={this.moveToShelf} searchPage={false}/>
+                <Bookshelves name='Read' books={readBooks} moveToShelf={this.moveToShelf} searchPage={false}/>
               </div>
             </div>
             <div className="open-search">
@@ -69,12 +105,17 @@ class BooksApp extends React.Component {
                   However, remember that the BooksAPI.search method DOES search by title or author. So, don't worry if
                   you don't find a specific author or title. Every search is limited by search terms.
                 */}
-                <input type="text" placeholder="Search by title or author"/>
+                <input
+                  type='text'
+                  placeholder='Search by title or author'
+                  value={searchQuery}
+                  onChange={(event) => (this.updateSearchQuery(event.target.value))}
+                />
 
               </div>
             </div>
             <div className="search-books-results">
-              <ol className="books-grid"></ol>
+              <Bookshelves name='None' books={searchResultBooks} moveToShelf={this.moveToShelf} searchPage={true}/>
             </div>
           </div>
         )}/>

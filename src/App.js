@@ -1,6 +1,7 @@
-import React from 'react'
-import Bookshelves from './Bookshelves'
-import * as BooksAPI from './BooksAPI'
+import React from 'react';
+import { Link, Route } from 'react-router-dom';
+import Bookshelves from './Bookshelves';
+import * as BooksAPI from './BooksAPI';
 
 import './App.css'
 
@@ -14,6 +15,7 @@ class BooksApp extends React.Component {
       this.setState({books})
     })
   }
+
   moveToShelf = (changedBook, newShelf) => {
     BooksAPI.update(changedBook, newShelf).then((response) => {
       const books = [...this.state.books]
@@ -28,13 +30,36 @@ class BooksApp extends React.Component {
     const currentlyReadingBooks = this.state.books.filter(book => book.shelf === 'currentlyReading')
     const wantToReadBooks = this.state.books.filter(book => book.shelf === 'wantToRead')
     const readBooks = this.state.books.filter(book => book.shelf === 'read')
+    // what does one do with no shelf books?
 
     return (
       <div className="app">
-        {this.state.showSearchPage ? (
+        <Route exact path='/' render={() =>(
+          <div className="list-books">
+            <div className="list-books-title">
+              <h1>MyReads</h1>
+            </div>
+            <div className="list-books-content">
+              <div>
+                <Bookshelves name='Currently Reading' books={currentlyReadingBooks} moveToShelf={this.moveToShelf} />
+                <Bookshelves name='Want To Read' books={wantToReadBooks} moveToShelf={this.moveToShelf} />
+                <Bookshelves name='Read' books={readBooks} moveToShelf={this.moveToShelf} />
+              </div>
+            </div>
+            <div className="open-search">
+              <Link to='/search'
+                onClick={this.props.onNavigate}
+              >Add a book</Link>
+            </div>
+          </div>
+        )}/>
+        <Route exact path='/search' render={() =>(
           <div className="search-books">
             <div className="search-books-bar">
-              <a className="close-search" onClick={() => this.setState({ showSearchPage: false })}>Close</a>
+              <Link to='/'
+                className='close-search'
+                onClick={this.props.onNavigate}
+              >Close</Link>
               <div className="search-books-input-wrapper">
                 {/*
                   NOTES: The search from BooksAPI is limited to a particular set of search terms.
@@ -52,23 +77,7 @@ class BooksApp extends React.Component {
               <ol className="books-grid"></ol>
             </div>
           </div>
-        ) : (
-          <div className="list-books">
-            <div className="list-books-title">
-              <h1>MyReads</h1>
-            </div>
-            <div className="list-books-content">
-              <div>
-                <Bookshelves name='Currently Reading' books={currentlyReadingBooks} moveToShelf={this.moveToShelf} />
-                <Bookshelves name='Want To Read' books={wantToReadBooks} moveToShelf={this.moveToShelf} />
-                <Bookshelves name='Read' books={readBooks} moveToShelf={this.moveToShelf} />
-              </div>
-            </div>
-            <div className="open-search">
-              <a onClick={() => this.setState({ showSearchPage: true })}>Add a book</a>
-            </div>
-          </div>
-        )}
+        )}/>
       </div>
     )
   }

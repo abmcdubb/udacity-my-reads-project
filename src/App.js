@@ -1,9 +1,8 @@
 import React from 'react';
 import { Link, Route } from 'react-router-dom';
-// import escapeRegExp from 'escape-string-regexp';
 import Bookshelves from './Bookshelves';
 import * as BooksAPI from './BooksAPI';
-
+import sortBy from 'sort-by'
 
 import './App.css'
 
@@ -16,9 +15,9 @@ class BooksApp extends React.Component {
   componentDidMount() {
     BooksAPI.getAll().then((books) => {
       this.setState({books})
+      // this.clearSearchQuery()
     })
   }
-
   moveToShelf = (changedBook, newShelf) => {
     BooksAPI.update(changedBook, newShelf).then((response) => {
       const books = [...this.state.books]
@@ -37,13 +36,14 @@ class BooksApp extends React.Component {
       this.setState({books})
     })
   }
-
   updateSearchQuery = (query) => {
     this.setState({searchQuery: query })
+
     if (query.length > 0) {
       BooksAPI.search(query).then((response) => {
         if (response && !response['error']) {
-          this.setState({searchResultBooks: response})
+          this.syncBookShelves(response)
+          this.setState({searchResultBooks: response.sort(sortBy('title'))})
         }
         else {
           this.clearSearchQuery()
@@ -55,18 +55,30 @@ class BooksApp extends React.Component {
       this.clearSearchQuery()
     }
   }
-
   clearSearchQuery = () => {
     this.setState({searchResultBooks: []})
   }
+  // updates search results with shelf info if book is already part of shelved books collection
+  syncBookShelves = (searchResultBooks) => {
+    const searchBookIds = searchResultBooks.map((book) => book.id)
+
+    this.state.books.forEach((shelvedBook) => {
+      if (searchBookIds.includes(shelvedBook.id)) {
+        this.findAndUpdateBookShelf(searchResultBooks, shelvedBook)
+      }
+    })
+  }
+  findAndUpdateBookShelf = (books, bookToShelve) => {
+    const bookIndex = books.findIndex((book) => book.id === bookToShelve.id)
+    books[bookIndex].shelf = bookToShelve.shelf
+  }
 
   render() {
-    const currentlyReadingBooks = this.state.books.filter(book => book.shelf === 'currentlyReading')
-    const wantToReadBooks = this.state.books.filter(book => book.shelf === 'wantToRead')
-    const readBooks = this.state.books.filter(book => book.shelf === 'read')
+    const currentlyReadingBooks = this.state.books.filter(book => book.shelf === 'currentlyReading').sort(sortBy('title'))
+    const wantToReadBooks = this.state.books.filter(book => book.shelf === 'wantToRead').sort(sortBy('title'))
+    const readBooks = this.state.books.filter(book => book.shelf === 'read').sort(sortBy('title'))
 
     const {searchQuery, searchResultBooks} = this.state
-    // what does one do with no shelf books?
 
     return (
       <div className="app">
@@ -97,14 +109,6 @@ class BooksApp extends React.Component {
                 onClick={this.props.onNavigate}
               >Close</Link>
               <div className="search-books-input-wrapper">
-                {/*
-                  NOTES: The search from BooksAPI is limited to a particular set of search terms.
-                  You can find these search terms here:
-                  https://github.com/udacity/reactnd-project-myreads-starter/blob/master/SEARCH_TERMS.md
-
-                  However, remember that the BooksAPI.search method DOES search by title or author. So, don't worry if
-                  you don't find a specific author or title. Every search is limited by search terms.
-                */}
                 <input
                   type='text'
                   placeholder='Search by title or author'
